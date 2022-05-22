@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
@@ -57,6 +58,8 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
             this.checkDate(requestBody, t);
             this.checkZone(requestBody, t);
             this.checkDisabled(requestBody, t);
+            this.checkStudent(requestBody, t);
+            this.checkDiscountCard(requestBody, t);
             return new ResponseEntity<String>("Ticket is valid", HttpStatus.OK);
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -75,7 +78,7 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
 
     private void checkDate(TicketValidationRequest requestBody, Ticket t) throws Exception {
         LocalDateTime date = LocalDateTime.parse(requestBody.date, dateTimeFormatter);
-        if (ChronoUnit.HOURS.between(t.from, date) < 0 || ChronoUnit.HOURS.between(date, t.until) < 0) {
+        if (ChronoUnit.SECONDS.between(t.from, date) < 0 || ChronoUnit.SECONDS.between(date, t.until) < 0) {
             throw new Exception();
         }
     }
@@ -90,9 +93,24 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
     }
 
     private void checkDisabled(TicketValidationRequest requestBody, Ticket t) throws Exception {
-        boolean disabled = requestBody.disabled;
-        if (disabled && !t.disabled) {
+        boolean isDisabled = requestBody.disabled;
+        if (t.disabled && !isDisabled) {
             throw new Exception();
+        }
+    }
+
+    private void checkStudent(TicketValidationRequest requestBody, Ticket t) throws Exception {
+        boolean isStudent = requestBody.student;
+        if (t.student && !isStudent) {
+            throw new Exception();
+        }
+    }
+
+    private void checkDiscountCard(TicketValidationRequest requestBody, Ticket t) throws Exception {
+        LocalDateTime date = LocalDateTime.parse(requestBody.date, dateTimeFormatter);
+        if (t.discountCard) {
+            DiscountCard userDiscountCard = this.getDiscountCard(requestBody.discountCardId);
+            this.checkDiscountCardValidation(userDiscountCard, date);
         }
     }
 
@@ -103,5 +121,21 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
         }
 
         return candidate;
+    }
+
+    private DiscountCard getDiscountCard(long id) throws Exception {
+        if (!db.discountCardList.containsKey(id)) {
+            throw new Exception();
+        } else {
+            return db.discountCardList.get(id);
+        }
+    }
+
+    private void checkDiscountCardValidation(DiscountCard card, LocalDateTime date) throws Exception {
+        LocalDate convertedDate = date.toLocalDate();
+        if ((ChronoUnit.DAYS.between(card.from, convertedDate) < 0
+             || ChronoUnit.DAYS.between(convertedDate, card.until) < 0)) {
+            throw new Exception();
+        }
     }
 }
