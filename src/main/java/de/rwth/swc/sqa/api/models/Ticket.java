@@ -69,9 +69,14 @@ public class Ticket implements CustomDateTimeFormatter {
         boolean isStudent = false;
         boolean isChild = false;
         long age = ChronoUnit.YEARS.between(this.LDBirthDate, currentDate);
+
+        if (this.student && (age < 14 || age >= 28)) {
+            throw new Exception();
+        }
+
         if (age >= 60) {
             isSenior = true;
-        } else if (this.student && age < 28) {
+        } else if (this.student) {
             isStudent = true;
         } else if (age < 14) {
             isChild = true;
