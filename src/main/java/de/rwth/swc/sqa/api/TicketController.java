@@ -86,7 +86,7 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
     private void checkZone(TicketValidationRequest requestBody, Ticket t) throws Exception {
         String zone = requestBody.zone;
         if ((Objects.equals(t.zone, "A") && !Objects.equals(zone, "A"))
-            || ((Objects.equals(t.zone, "B") && Objects.equals(zone, "C")))
+            || (Objects.equals(t.zone, "B") && Objects.equals(zone, "C"))
         ) {
             throw new Exception();
         }
