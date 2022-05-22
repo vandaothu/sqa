@@ -7,9 +7,7 @@ public class Customer extends CustomerRequestBody {
     public Customer(long id, String birthdate, boolean disabled) throws Exception {
         try {
             LocalDate.parse(birthdate, dateFormatter);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
+        } catch (Exception e) {}
 
         this.id = id;
         this.birthdate = birthdate;

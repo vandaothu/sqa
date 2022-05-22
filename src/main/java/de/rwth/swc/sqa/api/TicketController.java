@@ -45,7 +45,6 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
             db.ticketList.put(ticketId, t);
             return new ResponseEntity<Ticket>(t, HttpStatus.CREATED);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
             return new ResponseEntity<Ticket>(HttpStatus.BAD_REQUEST);
         }
 
@@ -62,7 +61,6 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
             this.checkDiscountCard(requestBody, t);
             return new ResponseEntity<String>("Ticket is valid", HttpStatus.OK);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
             return new ResponseEntity<String>("Ticket is not valid", HttpStatus.FORBIDDEN);
         }
 
