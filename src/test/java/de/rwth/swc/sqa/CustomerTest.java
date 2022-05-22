@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
+import org.hamcrest.Matchers;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
@@ -62,6 +64,7 @@ public class CustomerTest {
                     body("birthdate", equalTo(date)).
                     body("disabled",equalTo(false)). //false if not set true
                     statusCode(201);
+            assertThat(response.then().extract().path("id").toString().matches("[0-9]")).isTrue();
 
         }
     }
@@ -77,6 +80,7 @@ public class CustomerTest {
                 statusCode(201).
                 body("birthdate", equalTo("1999-10-11")).
                 body("disabled",equalTo(true));
+        assertThat(response.then().extract().path("id").toString().matches("[0-9]")).isTrue();
 
         //non-boolean value as disabled
         ObjectNode errorpostbody = objectMapper.createObjectNode().put("birthdate","1999-10-11").put("disabled","ja");
