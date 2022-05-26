@@ -9,8 +9,6 @@ import java.util.Objects;
 public class Ticket implements CustomDateTimeFormatter {
     public long id;
     public String validFrom;
-    public LocalDateTime from;
-    public LocalDateTime until;
     public String birthdate;
     public LocalDate LDBirthDate;
     public String validFor;
@@ -47,17 +45,17 @@ public class Ticket implements CustomDateTimeFormatter {
 
     private void checkTimeFormat() throws Exception {
         this.LDBirthDate = LocalDate.parse(this.birthdate, dateFormatter);
-        this.from = LocalDateTime.parse(this.validFrom, dateTimeFormatter);
+        try {
+            LocalDateTime.parse(this.validFrom, dateTimeFormatter);
+        } catch (Exception e) {
+            throw new Exception();
+        }
 
-        if (Objects.equals(this.validFor, "1h")) {
-            this.until = this.from.plusHours(1);
-        } else if (Objects.equals(this.validFor, "1d")) {
-            this.until = this.from.plusDays(1);
-        } else if (Objects.equals(this.validFor, "30d")) {
-            this.until = this.from.plusDays(30);
-        } else if (Objects.equals(this.validFor, "1y")) {
-            this.until = this.from.plusYears(1);
-        } else {
+        if (!Objects.equals(this.validFor, "1h")
+            && !Objects.equals(this.validFor, "1d")
+            && !Objects.equals(this.validFor, "30d")
+            && !Objects.equals(this.validFor, "1y")
+        ) {
             throw new Exception();
         }
     }
@@ -93,6 +91,22 @@ public class Ticket implements CustomDateTimeFormatter {
     private void checkDiscountCard() throws Exception {
         if (this.discountCard && !Objects.equals(this.validFor, "30d") && !Objects.equals(this.validFor, "1y")) {
             throw new Exception();
+        }
+    }
+
+    public LocalDateTime getFrom() {
+        return LocalDateTime.parse(this.validFrom, dateTimeFormatter);
+    }
+
+    public LocalDateTime getUntil() {
+        if (Objects.equals(this.validFor, "1h")) {
+            return this.getFrom().plusHours(1);
+        } else if (Objects.equals(this.validFor, "1d")) {
+            return this.getFrom().plusDays(1);
+        } else if (Objects.equals(this.validFor, "30d")) {
+            return this.getFrom().plusDays(30);
+        } else {
+            return this.getFrom().plusYears(1);
         }
     }
 }
