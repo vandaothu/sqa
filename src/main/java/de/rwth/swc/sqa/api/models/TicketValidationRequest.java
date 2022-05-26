@@ -4,9 +4,9 @@ public class TicketValidationRequest {
     public long ticketId;
     public String zone;
     public String date;
-    public boolean disabled;
-    public long discountCardId;
-    public boolean student;
+    public boolean disabled = false;
+    public long discountCardId = -1;
+    public boolean student = false;
 
     public TicketValidationRequest(int ticketId, String zone, String date) {
         this.ticketId = ticketId;
