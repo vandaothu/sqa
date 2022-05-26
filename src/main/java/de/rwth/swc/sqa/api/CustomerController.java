@@ -64,7 +64,14 @@ public class CustomerController implements CustomersApi {
         if (!db.customerList.containsKey(customerId)) {
             return new ResponseEntity<ArrayList<DiscountCard>>(HttpStatus.NOT_FOUND);
         }
-        return new ResponseEntity<ArrayList<DiscountCard>>(this.getDiscountCards(customerId), HttpStatus.OK);
+
+        ArrayList<DiscountCard> result = this.getDiscountCards(customerId);
+
+        if (result.size() == 0) {
+            return new ResponseEntity<ArrayList<DiscountCard>>(HttpStatus.NOT_FOUND);
+        }
+
+        return new ResponseEntity<ArrayList<DiscountCard>>(result, HttpStatus.OK);
     }
 
     private long generateId(String listName) {
@@ -96,8 +103,8 @@ public class CustomerController implements CustomersApi {
 
     private void checkDiscountCardConflict(DiscountCard cardToCheck, long customerId) throws Exception {
         for (DiscountCard card : this.getDiscountCards(customerId)) {
-            if (!(ChronoUnit.DAYS.between(card.until, cardToCheck.from) > 0
-                  || ChronoUnit.DAYS.between(cardToCheck.until, card.from) > 0)) {
+            if (!(ChronoUnit.DAYS.between(card.getUntil(), cardToCheck.getFrom()) > 0
+                  || ChronoUnit.DAYS.between(cardToCheck.getUntil(), card.getFrom()) > 0)) {
                 throw new Exception("conflict");
             }
         }

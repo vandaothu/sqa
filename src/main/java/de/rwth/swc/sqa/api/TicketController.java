@@ -76,7 +76,7 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
 
     private void checkDate(TicketValidationRequest requestBody, Ticket t) throws Exception {
         LocalDateTime date = LocalDateTime.parse(requestBody.date, dateTimeFormatter);
-        if (ChronoUnit.SECONDS.between(t.from, date) < 0 || ChronoUnit.SECONDS.between(date, t.until) < 0) {
+        if (ChronoUnit.SECONDS.between(t.getFrom(), date) < 0 || ChronoUnit.SECONDS.between(date, t.getUntil()) < 0) {
             throw new Exception();
         }
     }
@@ -131,8 +131,8 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
 
     private void checkDiscountCardValidation(DiscountCard card, LocalDateTime date) throws Exception {
         LocalDate convertedDate = date.toLocalDate();
-        if ((ChronoUnit.DAYS.between(card.from, convertedDate) < 0
-             || ChronoUnit.DAYS.between(convertedDate, card.until) < 0)) {
+        if ((ChronoUnit.DAYS.between(card.getFrom(), convertedDate) < 0
+             || ChronoUnit.DAYS.between(convertedDate, card.getUntil()) < 0)) {
             throw new Exception();
         }
     }

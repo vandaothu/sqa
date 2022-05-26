@@ -7,20 +7,19 @@ import java.util.Objects;
 public class DiscountCard extends DiscountCardRequestBody {
     public long id;
     public long customerId;
-    public LocalDate from;
-    public LocalDate until;
 
     public DiscountCard(long cardId, long customerId, int type, String validFrom, String validFor) throws Exception {
-        this.from = LocalDate.parse(validFrom, dateFormatter);
+        try {
+            LocalDate.parse(validFrom, dateFormatter);
+        } catch (Exception e) {
+            throw new Exception();
+        }
+
         if (type != 25 && type != 50) {
             throw new Exception();
         }
 
-        if (Objects.equals(validFor, "30d")) {
-            this.until = this.from.plusDays(30);
-        } else if (Objects.equals(validFor, "1y")) {
-            this.until = this.from.plusYears(1);
-        } else {
+        if (!Objects.equals(validFor, "30d") && !Objects.equals(validFor, "1y")) {
             throw new Exception();
         }
 
@@ -29,5 +28,17 @@ public class DiscountCard extends DiscountCardRequestBody {
         this.type = type;
         this.validFrom = validFrom;
         this.validFor = validFor;
+    }
+
+    public LocalDate getFrom() {
+        return LocalDate.parse(validFrom, dateFormatter);
+    }
+
+    public LocalDate getUntil() {
+        if (Objects.equals(this.validFor, "30d")) {
+            return this.getFrom().plusDays(30);
+        } else {
+            return this.getFrom().plusYears(1);
+        }
     }
 }
