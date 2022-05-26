@@ -64,7 +64,14 @@ public class CustomerController implements CustomersApi {
         if (!db.customerList.containsKey(customerId)) {
             return new ResponseEntity<ArrayList<DiscountCard>>(HttpStatus.NOT_FOUND);
         }
-        return new ResponseEntity<ArrayList<DiscountCard>>(this.getDiscountCards(customerId), HttpStatus.OK);
+
+        ArrayList<DiscountCard> result = this.getDiscountCards(customerId);
+
+        if (result.size() == 0) {
+            return new ResponseEntity<ArrayList<DiscountCard>>(HttpStatus.NOT_FOUND);
+        }
+
+        return new ResponseEntity<ArrayList<DiscountCard>>(result, HttpStatus.OK);
     }
 
     private long generateId(String listName) {
