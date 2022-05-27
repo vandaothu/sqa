@@ -4,7 +4,6 @@ package de.rwth.swc.sqa;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.restassured.RestAssured;
-import io.restassured.http.Headers;
 import io.restassured.response.Response;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -23,12 +22,9 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.everyItem;
-import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 
@@ -193,12 +189,7 @@ public class DiscountCardTest {
 
         //no card found
         Response response = given().when().get(path(customerIds.get(2)));
-        System.out.println(response.getBody().asString());
-
-        JSONArray responseArray = new JSONArray(response.getBody().asString());
-        if(responseArray.length()==0){
-            response.then().assertThat().statusCode(404);
-        }
+        response.then().assertThat().statusCode(404);
 
     }
 

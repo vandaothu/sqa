@@ -33,7 +33,7 @@ public class TicketValidationTest {
 
     private static ObjectMapper staticMapper = new ObjectMapper();
     private static List<Long> discountCards = new ArrayList<>();
-    private static Map<Long,Ticket> tickets = new HashMap<>();
+    private static Map<Long,Ticket> tickets = new LinkedHashMap<>();
 
     @BeforeAll
     public static void createTickets() throws JSONException {
@@ -47,9 +47,9 @@ public class TicketValidationTest {
 
         ObjectNode[] cardrequest = new ObjectNode[2];
         //create discount card request
-        cardrequest[0] = staticMapper.createObjectNode().put("validFrom","2022-5-26").put("validFor", "1y").put("type",50);
+        cardrequest[0] = staticMapper.createObjectNode().put("validFrom","2022-05-26").put("validFor", "1y").put("type",50);
         //create request of very old discound card
-        cardrequest[1] = staticMapper.createObjectNode().put("validFrom","2000-5-26").put("validFor", "1y").put("type",50);
+        cardrequest[1] = staticMapper.createObjectNode().put("validFrom","2000-05-26").put("validFor", "1y").put("type",50);
         for(int i=0; i<2; i++){
             Response response = given().contentType("application/json").body(cardrequest[i].toString()).post("/customers/"+customerIds[i]+"/discountcards");
             if(response.statusCode()==201){
@@ -60,23 +60,23 @@ public class TicketValidationTest {
         }
 
         //buy ticket
-        ObjectNode[] ticketrequest = new ObjectNode[3];
+        ObjectNode[] ticketrequest = new ObjectNode[4];
         //create an expired ticket
-        ticketrequest[0] = staticMapper.createObjectNode().put("birthdate","1999-10-11").put("validFrom","2010-5-26T10:38:59").put("validFor","1y").put("zone","A");
+        ticketrequest[0] = staticMapper.createObjectNode().put("birthdate","1999-10-11").put("validFrom","2010-05-26T10:38:59").put("validFor","1h").put("zone", "A");
         //create a valid ticket with no discount
-        ticketrequest[1] = staticMapper.createObjectNode().put("birthdate","1999-10-11").put("validFrom","2022-5-26T10:38:59").put("validFor","1y").put("zone","B");
+        ticketrequest[1] = staticMapper.createObjectNode().put("birthdate","1999-10-11").put("validFrom","2022-05-26T10:38:59").put("validFor","1y");
         //create a valid ticket with discount card
-        ticketrequest[2] = staticMapper.createObjectNode().put("birthdate","1999-10-11").put("validFrom","2010-5-26T10:38:59").put("validFor","1y").put("discountCard",true).put("zone","C");
-        for(int i=0; i<3; i++){
+        ticketrequest[2] = staticMapper.createObjectNode().put("birthdate","1999-10-11").put("validFrom","2022-05-26T10:38:59").put("validFor","1y").put("discountCard",true);
+        //create a ticket for disabled person
+        ticketrequest[3] = staticMapper.createObjectNode().put("birthdate","1999-10-11").put("validFrom","2010-05-26T10:38:59").put("validFor","30d").put("disabled", true).put("student", true);
+        for(int i=0; i<4; i++){
             Response response = given().contentType("application/json").body(ticketrequest[i].toString()).post("/tickets");
             if(response.statusCode()==201) {
-                System.out.println(response.getBody().asString());
                 JSONObject jsonTicket = new JSONObject(response.getBody().asString());
                 //save pairs of (ticketId, Ticket)
                 tickets.put(Long.valueOf(jsonTicket.get("id").toString()), new Ticket(jsonTicket));
             }
         }
-        System.out.println(tickets);
 
     }
 
@@ -85,11 +85,8 @@ public class TicketValidationTest {
         Long ticketId = tickets.keySet().iterator().next();
         Ticket ticket = tickets.get(ticketId);
 
-
-        List<String> zones = List.of("A", "B", "C");
-        zones.remove(ticket.zone);
         ObjectNode post_inconsistent_zone = objectMapper.createObjectNode().put("ticketId", ticketId).
-                put("zone", zones.get(0)).
+                put("zone", "B").
                 put("date", ticket.getStartTime());
         //send request to validate ticket with inconsistency in zone
         given().contentType("application/json").body(post_inconsistent_zone.toString()).post(PATH).then().assertThat().statusCode(403);
@@ -97,15 +94,29 @@ public class TicketValidationTest {
         ObjectNode post_inconsistent_disabled = objectMapper.createObjectNode().put("ticketId", ticketId).
                 put("zone", ticket.zone).
                 put("date", ticket.getStartTime()).
-                put("disabled", !ticket.disabled);
-        //send request to validate ticket with inconsistency in disability
+                put("disabled", true);
+        //disabled people can use normal ticket
+        given().contentType("application/json").body(post_inconsistent_disabled.toString()).post(PATH).then().assertThat().statusCode(200);
+
+        Long special_ticketId = tickets.keySet().stream().skip(3).findFirst().orElse(null);
+        post_inconsistent_disabled.remove("disabled");
+        post_inconsistent_disabled.remove("ticketId");
+        post_inconsistent_disabled.put("ticketId",special_ticketId);
+        //normal people can't use ticket for the disabled
         given().contentType("application/json").body(post_inconsistent_disabled.toString()).post(PATH).then().assertThat().statusCode(403);
+
 
         ObjectNode post_inconsistent_student = objectMapper.createObjectNode().put("ticketId", ticketId).
                 put("zone", ticket.zone).
                 put("date", ticket.getStartTime()).
-                put("student", !ticket.student);
-        //send request to validate ticket with inconsistency in student status
+                put("student", true);
+        //student can use normal ticket
+        given().contentType("application/json").body(post_inconsistent_student.toString()).post(PATH).then().assertThat().statusCode(200);
+        post_inconsistent_student = objectMapper.createObjectNode().put("ticketId", special_ticketId).
+                put("zone", ticket.zone).
+                put("date", ticket.getStartTime()).
+                put("student", false);
+        //normal people can't use student ticket
         given().contentType("application/json").body(post_inconsistent_student.toString()).post(PATH).then().assertThat().statusCode(403);
     }
 
@@ -122,6 +133,7 @@ public class TicketValidationTest {
         ObjectNode post_wrongdate = objectMapper.createObjectNode().put("ticketId", oldTicketId).
                 put("zone", oldTicket.zone).
                 put("date", ticket.getStartTime());
+
         //send request to validate ticket that is used in wrong timeframe
         given().contentType("application/json").body(post_wrongdate.toString()).post(PATH).then().assertThat().statusCode(403);
 
@@ -129,7 +141,7 @@ public class TicketValidationTest {
         ObjectNode post_correctdate = objectMapper.createObjectNode().put("ticketId", ticketId).
                 put("zone", ticket.zone).
                 put("date", ticket.getStartTime());
-        //send request to validate ticket that is used in wrong timeframe
+        //send request to validate ticket that is used in correct timeframe
         given().contentType("application/json").body(post_correctdate.toString()).post(PATH).then().assertThat().statusCode(200);
     }
 
@@ -152,8 +164,8 @@ public class TicketValidationTest {
                 put("zone", NO_discount_ticket.zone).
                 put("date", NO_discount_ticket.getStartTime()).
                 put("discountCard", valid_discountCard);
-        //given a discountCard
-        given().contentType("application/json").body(post_ticketWithNoDiscount.toString()).post(PATH).then().assertThat().statusCode(403);
+        //given a discountCard -> card-holder can use non-discounted ticket
+        given().contentType("application/json").body(post_ticketWithNoDiscount.toString()).post(PATH).then().assertThat().statusCode(200);
         post_ticketWithNoDiscount.remove("discountCard");
         //given no discountCard
         given().contentType("application/json").body(post_ticketWithNoDiscount.toString()).post(PATH).then().assertThat().statusCode(200);
@@ -168,15 +180,17 @@ public class TicketValidationTest {
         //given no discountCard
         given().contentType("application/json").body(post_ticketWithDiscount.toString()).post(PATH).then().assertThat().statusCode(403);
 
-        post_ticketWithDiscount.put("discountCard",expired_discountCard);
+
+        post_ticketWithDiscount.put("discountCardId", expired_discountCard);
         //given expired discountCard
         given().contentType("application/json").body(post_ticketWithDiscount.toString()).post(PATH).then().assertThat().statusCode(403);
 
-        post_ticketWithDiscount.remove("discountCard");
-        post_ticketWithDiscount.put("discountCard",valid_discountCard);
-        //given valid discountCard
-        given().contentType("application/json").body(post_ticketWithDiscount.toString()).post(PATH).then().assertThat().statusCode(200);
 
+        post_ticketWithDiscount.remove("discountCard");
+        post_ticketWithDiscount.put("discountCardId", valid_discountCard);
+        //given valid discountCard
+        System.out.println(post_ticketWithDiscount.toString());
+        given().contentType("application/json").body(post_ticketWithDiscount.toString()).post(PATH).then().assertThat().statusCode(200);
     }
 
     private static class Ticket{
@@ -187,7 +201,6 @@ public class TicketValidationTest {
         protected String zone;
         protected boolean student;
         protected boolean discountCard;
-        final private DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-ddTHH:mm::ss");
 
         protected boolean parsingJson = false;
 
@@ -195,7 +208,7 @@ public class TicketValidationTest {
         protected Ticket(JSONObject jsonTicket){
             try {
                 this.id = Long.valueOf(jsonTicket.get("id").toString());
-                this.validFrom =  LocalDateTime.parse(jsonTicket.get("validFrom").toString(), formatter);
+                this.validFrom =  LocalDateTime.parse(jsonTicket.get("validFrom").toString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
                 switch (jsonTicket.get("validFor").toString()){
                     case "1h":
                         this.validTil = this.validFrom.plusHours(1);
@@ -216,14 +229,20 @@ public class TicketValidationTest {
                 this.disabled = (Boolean) jsonTicket.get("disabled");
                 this.student = (Boolean) jsonTicket.get("student");
                 this.discountCard = (Boolean) jsonTicket.get("discountCard");
-                this.zone = jsonTicket.get("zone").toString();
+                if(jsonTicket.get("zone").toString()!="null"){
+                    this.zone = jsonTicket.get("zone").toString();
+                }
+                else{
+                    this.zone = "C";
+                }
+
 
             } catch (JSONException e) {
                 this.parsingJson = true;
             }
         }
         protected String getStartTime(){
-            return this.validFrom.format(formatter);
+            return this.validFrom.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         }
     }
 
