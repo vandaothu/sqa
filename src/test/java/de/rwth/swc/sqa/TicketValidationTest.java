@@ -142,7 +142,9 @@ public class TicketValidationTest {
                 put("zone", ticket.zone).
                 put("date", ticket.getStartTime());
         //send request to validate ticket that is used in correct timeframe
-        given().contentType("application/json").body(post_correctdate.toString()).post(PATH).then().assertThat().statusCode(200);
+        given().contentType("application/json").body(post_correctdate.toString()).post(PATH).then().assertThat().statusCode(200); //BVT - lower bound
+        post_correctdate.remove("date"); post_correctdate.put("date", ticket.getEndTime());
+        given().contentType("application/json").body(post_correctdate.toString()).post(PATH).then().assertThat().statusCode(200); //BVT - upper bound
     }
 
     @Test
@@ -164,11 +166,14 @@ public class TicketValidationTest {
                 put("zone", NO_discount_ticket.zone).
                 put("date", NO_discount_ticket.getStartTime()).
                 put("discountCard", valid_discountCard);
+
         //given a discountCard -> card-holder can use non-discounted ticket
         given().contentType("application/json").body(post_ticketWithNoDiscount.toString()).post(PATH).then().assertThat().statusCode(200);
+
         post_ticketWithNoDiscount.remove("discountCard");
         //given no discountCard
         given().contentType("application/json").body(post_ticketWithNoDiscount.toString()).post(PATH).then().assertThat().statusCode(200);
+
 
 
 
@@ -189,8 +194,8 @@ public class TicketValidationTest {
         post_ticketWithDiscount.remove("discountCard");
         post_ticketWithDiscount.put("discountCardId", valid_discountCard);
         //given valid discountCard
-        System.out.println(post_ticketWithDiscount.toString());
         given().contentType("application/json").body(post_ticketWithDiscount.toString()).post(PATH).then().assertThat().statusCode(200);
+
     }
 
     private static class Ticket{
@@ -244,6 +249,10 @@ public class TicketValidationTest {
         protected String getStartTime(){
             return this.validFrom.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         }
+        protected String getEndTime(){
+            return this.validTil.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        }
+
     }
 
 
