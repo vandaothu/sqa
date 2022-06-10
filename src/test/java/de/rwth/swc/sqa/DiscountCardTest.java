@@ -70,8 +70,8 @@ public class DiscountCardTest {
     }
     @ParameterizedTest
     @MethodSource("provideDataForAddDiscountCard")
-    public void addDiscountCardTest(int type, String validFrom, String validFor) throws JSONException {
-
+    public void addDiscountCardTest(int type, String validFrom, String validFor) {
+        boolean jsonError = false;
         //create discount cards for an existed customer
         Long customerId = customerIds.get(0);
         ObjectNode postbody = objectMapper.createObjectNode().put("validFrom",validFrom).put("validFor",validFor).put("type",type);
@@ -112,7 +112,13 @@ public class DiscountCardTest {
                 response.then().assertThat().statusCode(201);
 
                 //get keys from response body
-                JSONObject myObject = new JSONObject(response.getBody().asString());
+                JSONObject myObject = null;
+                try {
+                    myObject = new JSONObject(response.getBody().asString());
+                } catch (JSONException e) {
+                    jsonError = true;
+                }
+
                 List<String> keys = new ArrayList<>();
                 myObject.keys().forEachRemaining(key -> keys.add(key.toString()));
 
@@ -122,6 +128,7 @@ public class DiscountCardTest {
                 });
             }
         }
+        assertThat(jsonError).isFalse();
     }
 
     private static Stream<Arguments> provideDataForGetDiscountCard(){
@@ -134,8 +141,8 @@ public class DiscountCardTest {
 
     @ParameterizedTest
     @MethodSource("provideDataForGetDiscountCard")
-    public void getDiscountCardTest_validInputs(int type, String validFrom, String validFor) throws JSONException {
-
+    public void getDiscountCardTest_validInputs(int type, String validFrom, String validFor) {
+        boolean jsonError = false;
         Long customerId = customerIds.get(1);
         //successful post 201
         ObjectNode postbody = objectMapper.createObjectNode().put("validFrom", validFrom).put("validFor", validFor).put("type", type);
@@ -143,7 +150,12 @@ public class DiscountCardTest {
 
 
         Response getResponse = given().when().get(path(customerId));
-        JSONArray responseArray = new JSONArray(getResponse.getBody().asString());
+        JSONArray responseArray = null;
+        try {
+            responseArray = new JSONArray(getResponse.getBody().asString());
+        } catch (JSONException e) {
+            jsonError=true;
+        }
         if(responseArray.length()==0){
             getResponse.then().assertThat().statusCode(404);
         }
@@ -154,10 +166,14 @@ public class DiscountCardTest {
             List<List<String>> keys = new ArrayList<>();
             for(int i = 0 ; i < responseArray.length(); i++) {
                 List<String> keysOfCard = new ArrayList<>();
-                responseArray.getJSONObject(i).keys().forEachRemaining(key -> keysOfCard.add(key.toString()));
+                try {
+                    responseArray.getJSONObject(i).keys().forEachRemaining(key -> keysOfCard.add(key.toString()));
+                } catch (JSONException e) {
+                    jsonError = true;
+                }
                 keys.add(keysOfCard);
             }
-
+            assertThat(jsonError).isFalse();
             //assure that all returned cards have the defined schema
             keys.forEach(card -> {
                 DiscountCardPara.forEach(para -> {
@@ -179,7 +195,7 @@ public class DiscountCardTest {
     }
 
     @Test
-    public void getDiscountCardTest_invalidInputs() throws JSONException {
+    public void getDiscountCardTest_invalidInputs() {
         //invalid id
         given().contentType("application/json").when().get("/customers/abc/discountcards").then().assertThat().statusCode(400);
 

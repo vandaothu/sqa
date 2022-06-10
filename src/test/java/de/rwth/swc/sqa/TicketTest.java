@@ -40,7 +40,7 @@ public class TicketTest {
     // test correct birthdate input
     @ParameterizedTest
     @ValueSource(strings = {"2023-10-20","1999-13-20","abc-10-20","1999-10-32","1999-10-20"})
-    public void buyTicketDateTest(String date) throws JSONException {
+    public void buyTicketDateTest(String date) {
         boolean errorInBirthDate = false;
 
         try {
@@ -77,7 +77,7 @@ public class TicketTest {
     // test correct validFrom input 
     @ParameterizedTest
     @ValueSource(strings = {"xxxx-05-26T13:00:00","2022-13-26T26:00:00","2022-05-26T13:xyz:00","2022-05-26T13:00:61","2022-05-26T13:00:00"})
-    public void buyTicketValidFromTest(String datetime) throws JSONException {
+    public void buyTicketValidFromTest(String datetime) {
         boolean errorInValidFrom = false;
 
         try {

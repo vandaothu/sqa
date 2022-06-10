@@ -48,8 +48,9 @@ public class CustomerTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"2023-10-20","1999-13-20","abc-10-20","1999-10-32","1999-10-20"})
-    public void addCustomerDateTest(String date) throws JSONException {
+    public void addCustomerDateTest(String date) {
         boolean errorInDate = false;
+        boolean jsonError = false;
 
         try {
             LocalDate birthdate = LocalDate.parse(date, DateTimeFormatter.ISO_LOCAL_DATE);
@@ -75,7 +76,12 @@ public class CustomerTest {
             assertThat(response.then().extract().path("id").toString().matches("[^0-9]")).isFalse();
 
             //get keys from response body
-            JSONObject myObject = new JSONObject(response.getBody().asString());
+            JSONObject myObject = null;
+            try {
+                myObject = new JSONObject(response.getBody().asString());
+            } catch (JSONException e) {
+                jsonError=true;
+            }
             List<String> keys = new ArrayList<>();
             myObject.keys().forEachRemaining(key -> keys.add(key.toString()));
 
@@ -85,12 +91,13 @@ public class CustomerTest {
             });
 
         }
+        Assertions.assertThat(jsonError).isFalse();
     }
 
 
     @Test
-    public void addDisabledCustomerTest() throws JSONException {
-
+    public void addDisabledCustomerTest() {
+        boolean jsonError=false;
         //boolean value as disabled
         ObjectNode postbody = objectMapper.createObjectNode().put("birthdate","1999-10-11").put("disabled",true);
         Response response = given().contentType("application/json").body(postbody.toString()).post(PATH);
@@ -104,7 +111,12 @@ public class CustomerTest {
 
 
         //get keys from response body
-        JSONObject myObject = new JSONObject(response.getBody().asString());
+        JSONObject myObject = null;
+        try {
+            myObject = new JSONObject(response.getBody().asString());
+        } catch (JSONException e) {
+            jsonError=true;
+        }
         List<String> keys = new ArrayList<>();
         myObject.keys().forEachRemaining(key -> keys.add(key.toString()));
 
@@ -117,6 +129,8 @@ public class CustomerTest {
         ObjectNode errorpostbody = objectMapper.createObjectNode().put("birthdate","1999-10-11").put("disabled","ja");
         Response errorresponse = given().contentType("application/json").body(errorpostbody.toString()).post(PATH);
         errorresponse.then().assertThat().statusCode(400);
+
+        Assertions.assertThat(jsonError).isFalse();
     }
 
 

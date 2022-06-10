@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 
@@ -36,8 +37,9 @@ public class TicketValidationTest {
     private static Map<Long,Ticket> tickets = new LinkedHashMap<>();
 
     @BeforeAll
-    public static void createTickets() throws JSONException {
+    public static void createTickets() {
         RestAssured.port = port;
+        boolean jsonError = false;
 
         //create customer
         ObjectNode postcustomer = staticMapper.createObjectNode().put("birthdate","1999-10-11");
@@ -53,9 +55,14 @@ public class TicketValidationTest {
         for(int i=0; i<2; i++){
             Response response = given().contentType("application/json").body(cardrequest[i].toString()).post("/customers/"+customerIds[i]+"/discountcards");
             if(response.statusCode()==201){
-                JSONObject jsonCard = new JSONObject(response.getBody().asString());
-                //save pairs of (cardId, simple timeframe of card)
-                discountCards.add(Long.valueOf(jsonCard.get("id").toString()));
+                JSONObject jsonCard = null;
+                try {
+                    jsonCard = new JSONObject(response.getBody().asString());
+                    //save pairs of (cardId, simple timeframe of card)
+                    discountCards.add(Long.valueOf(jsonCard.get("id").toString()));
+                } catch (JSONException e) {
+                    jsonError=true;
+                }
             }
         }
 
@@ -72,12 +79,18 @@ public class TicketValidationTest {
         for(int i=0; i<4; i++){
             Response response = given().contentType("application/json").body(ticketrequest[i].toString()).post("/tickets");
             if(response.statusCode()==201) {
-                JSONObject jsonTicket = new JSONObject(response.getBody().asString());
-                //save pairs of (ticketId, Ticket)
-                tickets.put(Long.valueOf(jsonTicket.get("id").toString()), new Ticket(jsonTicket));
+                JSONObject jsonTicket = null;
+                try {
+                    jsonTicket = new JSONObject(response.getBody().asString());
+                    //save pairs of (ticketId, Ticket)
+                    tickets.put(Long.valueOf(jsonTicket.get("id").toString()), new Ticket(jsonTicket));
+                } catch (JSONException e) {
+                    jsonError=true;
+                }
+
             }
         }
-
+        assertThat(jsonError).isFalse();
     }
 
     @Test
@@ -240,7 +253,6 @@ public class TicketValidationTest {
                 else{
                     this.zone = "C";
                 }
-
 
             } catch (JSONException e) {
                 this.parsingJson = true;
