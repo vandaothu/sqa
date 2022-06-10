@@ -67,8 +67,6 @@ public class TicketTest {
                     .body("discountCard", equalTo(false))
                     .body("zone", equalTo(null))
                     .body("student",equalTo(false))
-                    .body("from", equalTo("2022-05-26T13:00:00"))
-                    .body("until", equalTo("2022-06-25T13:00:00"))
                     .statusCode(201);
             assertThat(response.then().extract().path("id").toString().matches("[0-9]")).isTrue();
         }
@@ -104,8 +102,6 @@ public class TicketTest {
                     .body("discountCard", equalTo(false))
                     .body("zone", equalTo(null))
                     .body("student",equalTo(false))
-                    .body("from", equalTo(datetime))
-                    .body("until", equalTo("2023-05-26T13:00:00"))
                     .statusCode(201);
             assertThat(response.then().extract().path("id").toString().matches("[0-9]")).isTrue();
         }
@@ -122,7 +118,6 @@ public class TicketTest {
                                                             .put("disabled",true);                    
         Response response = given().contentType("application/json").body(body.toString()).post(PATH);
         response.then().assertThat()
-                .statusCode(201)
                 .body("validFrom", equalTo("2022-05-26T13:00:00"))
                 .body("birthdate", equalTo("2012-12-13"))
                 .body("LDBirthDate", equalTo("2012-12-13"))
@@ -131,8 +126,7 @@ public class TicketTest {
                 .body("discountCard", equalTo(false))
                 .body("zone", equalTo(null))
                 .body("student",equalTo(false))
-                .body("from", equalTo("2022-05-26T13:00:00"))
-                .body("until", equalTo("2022-06-25T13:00:00"));
+                .statusCode(201);
         assertThat(response.then().extract().path("id").toString().matches("[0-9]")).isTrue();
 
         ObjectNode errorBody = objectMapper.createObjectNode().put("validFrom","2022-05-26T13:00:00")
@@ -153,7 +147,6 @@ public class TicketTest {
                                                             .put("student",true);                               
         Response response = given().contentType("application/json").body(body.toString()).post(PATH);
         response.then().assertThat()
-                .statusCode(201)
                 .body("validFrom", equalTo("2022-05-26T13:00:00"))
                 .body("birthdate", equalTo("2002-12-13"))
                 .body("LDBirthDate", equalTo("2002-12-13"))
@@ -162,8 +155,7 @@ public class TicketTest {
                 .body("discountCard", equalTo(false))
                 .body("zone", equalTo(null))
                 .body("student",equalTo(true))
-                .body("from", equalTo("2022-05-26T13:00:00"))
-                .body("until", equalTo("2022-06-25T13:00:00"));
+                .statusCode(201);
         assertThat(response.then().extract().path("id").toString().matches("[0-9]")).isTrue();
 
         ObjectNode errorBody = objectMapper.createObjectNode().put("validFrom","2022-05-26T13:00:00")
@@ -184,7 +176,6 @@ public class TicketTest {
                                                             .put("discountCard", true);                          
         Response response = given().contentType("application/json").body(body.toString()).post(PATH);
         response.then().assertThat()
-                .statusCode(201)
                 .body("validFrom", equalTo("2022-05-26T13:00:00"))
                 .body("birthdate", equalTo("2002-12-13"))
                 .body("LDBirthDate", equalTo("2002-12-13"))
@@ -193,8 +184,7 @@ public class TicketTest {
                 .body("discountCard", equalTo(true))
                 .body("zone", equalTo(null))
                 .body("student",equalTo(false))
-                .body("from", equalTo("2022-05-26T13:00:00"))
-                .body("until", equalTo("2022-06-25T13:00:00"));
+                .statusCode(201);
         assertThat(response.then().extract().path("id").toString().matches("[0-9]")).isTrue();
 
         ObjectNode errorBody = objectMapper.createObjectNode().put("validFrom","2022-05-26T13:00:00")
