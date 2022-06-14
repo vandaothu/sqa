@@ -13,12 +13,13 @@ public class Ticket implements CustomDateTimeFormatter {
     public LocalDate LDBirthDate;
     public String validFor;
     public boolean disabled;
-    public boolean discountCard;
+    public int discountCard = -1;
     public String zone;
     public boolean student;
     static String[] zoneEnum = new String[]{"A", "B", "C"};
 
-    public Ticket(long id, String birthdate, String validFrom, String validFor, boolean disabled, boolean discountCard, String zone, boolean student) throws Exception {
+    public Ticket(long id, String birthdate, String validFrom, String validFor, boolean disabled, int discountCard, String zone,
+                  boolean student) throws Exception {
         this.id = id;
         this.birthdate = birthdate;
         this.validFor = validFor;
@@ -89,8 +90,11 @@ public class Ticket implements CustomDateTimeFormatter {
     }
 
     private void checkDiscountCard() throws Exception {
-        if (this.discountCard && !Objects.equals(this.validFor, "30d") && !Objects.equals(this.validFor, "1y")) {
-            throw new Exception();
+        if (this.discountCard != -1) {
+            if ((!Objects.equals(this.validFor, "30d") && !Objects.equals(this.validFor, "1y"))
+                || (this.discountCard != 25 && this.discountCard != 50)) {
+                throw new Exception();
+            }
         }
     }
 

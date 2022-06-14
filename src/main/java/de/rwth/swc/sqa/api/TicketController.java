@@ -51,17 +51,22 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
     }
 
     @PostMapping("/validate")
-    public ResponseEntity<String> validateTicket(@RequestBody TicketValidationRequest requestBody) {
+    public ResponseEntity<String> validateTicket(@RequestBody TicketValidationRequestRequestBody requestBody) {
         try {
-            Ticket t = this.getTicketToCheck(requestBody);
-            this.checkDate(requestBody, t);
-            this.checkZone(requestBody, t);
-            this.checkDisabled(requestBody, t);
-            this.checkStudent(requestBody, t);
-            this.checkDiscountCard(requestBody, t);
+            TicketValidationRequest validationRequest = new TicketValidationRequest(requestBody);
+            Ticket t = this.getTicketToCheck(validationRequest);
+            this.checkDate(validationRequest, t);
+            this.checkZone(validationRequest, t);
+            this.checkDisabled(validationRequest, t);
+            this.checkStudent(validationRequest, t);
+            this.checkDiscountCard(validationRequest, t);
             return new ResponseEntity<String>("Ticket is valid", HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<String>("Ticket is not valid", HttpStatus.FORBIDDEN);
+            if (Objects.equals(e.getMessage(), "invalid ticket")) {
+                return new ResponseEntity<String>("Ticket is not valid", HttpStatus.FORBIDDEN);
+            } else {
+                return new ResponseEntity<String>("Request is malformed", HttpStatus.BAD_REQUEST);
+            }
         }
 
     }
@@ -69,7 +74,7 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
     private Ticket getTicketToCheck(TicketValidationRequest requestBody) throws Exception {
         long id = requestBody.ticketId;
         if (!db.ticketList.containsKey(id)) {
-            throw new Exception();
+            throw new Exception("invalid ticket");
         }
         return db.ticketList.get(requestBody.ticketId);
     }
@@ -77,7 +82,7 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
     private void checkDate(TicketValidationRequest requestBody, Ticket t) throws Exception {
         LocalDateTime date = LocalDateTime.parse(requestBody.date, dateTimeFormatter);
         if (ChronoUnit.SECONDS.between(t.getFrom(), date) < 0 || ChronoUnit.SECONDS.between(date, t.getUntil()) < 0) {
-            throw new Exception();
+            throw new Exception("invalid ticket");
         }
     }
 
@@ -86,27 +91,27 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
         if ((Objects.equals(t.zone, "A") && !Objects.equals(zone, "A"))
             || (Objects.equals(t.zone, "B") && Objects.equals(zone, "C"))
         ) {
-            throw new Exception();
+            throw new Exception("invalid ticket");
         }
     }
 
     private void checkDisabled(TicketValidationRequest requestBody, Ticket t) throws Exception {
         boolean isDisabled = requestBody.disabled;
         if (t.disabled && !isDisabled) {
-            throw new Exception();
+            throw new Exception("invalid ticket");
         }
     }
 
     private void checkStudent(TicketValidationRequest requestBody, Ticket t) throws Exception {
         boolean isStudent = requestBody.student;
         if (t.student && !isStudent) {
-            throw new Exception();
+            throw new Exception("invalid ticket");
         }
     }
 
     private void checkDiscountCard(TicketValidationRequest requestBody, Ticket t) throws Exception {
         LocalDateTime date = LocalDateTime.parse(requestBody.date, dateTimeFormatter);
-        if (t.discountCard) {
+        if (t.discountCard != -1) {
             DiscountCard userDiscountCard = this.getDiscountCard(requestBody.discountCardId);
             this.checkDiscountCardValidation(userDiscountCard, date);
         }
@@ -123,7 +128,7 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
 
     private DiscountCard getDiscountCard(long id) throws Exception {
         if (!db.discountCardList.containsKey(id)) {
-            throw new Exception();
+            throw new Exception("invalid ticket");
         } else {
             return db.discountCardList.get(id);
         }
@@ -133,7 +138,7 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
         LocalDate convertedDate = date.toLocalDate();
         if ((ChronoUnit.DAYS.between(card.getFrom(), convertedDate) < 0
              || ChronoUnit.DAYS.between(convertedDate, card.getUntil()) < 0)) {
-            throw new Exception();
+            throw new Exception("invalid ticket");
         }
     }
 }

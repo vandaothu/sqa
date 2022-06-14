@@ -101,7 +101,7 @@ paths:
             items:
               $ref: "#/definitions/DiscountCard"
         "400":
-          description: "Invalid ID supplied"
+          description: "Invalid ID supplied. E.g. not a number"
         "404":
           description: "Customer doesnt exist or no card found"
   /tickets:
@@ -109,7 +109,7 @@ paths:
       tags:
         - "tickets"
       summary: "buy a new ticket"
-      description: "buy a new ticket. disabled, discountCard and student are optional and should default to false if not set. See Ticket table for avaiable Tickettypes"
+      description: "buy a new ticket. disabled, discountCard and student are optional and should default to false if not set. See Ticket table for avaiable Tickettypes. Tickets for 24h, 30d and 1year are valid in all zones. Ticket types marked with a - in the table are not sold by the company and thus should result in an invalid request."
       operationId: "buyTicket"
       consumes:
         - "application/json"
@@ -134,7 +134,7 @@ paths:
       tags:
         - "ticket validation"
       summary: "Check if a ticket is valid"
-      description: "Check if a ticket is valid given the required information to do a validation. Should be invalid if one of the ticket properties doesn't match the provided properties. Zone B includes Zone A. Furthermore Zone C includes all Zones."
+      description: "Check if a ticket is valid given the required information to do a validation. Should be invalid if one of the ticket properties doesn't match the provided properties or a non existing discouncardid is provided. Zone B includes Zone A. Furthermore Zone C includes all Zones. Also check for the correct discount card and date of validity. If the request is malformed a 400 Return Code should be returned."
       operationId: "validateTicket"
       consumes:
         - "application/json"
@@ -152,6 +152,8 @@ paths:
           description: "Ticket is valid"
         "403":
           description: "Ticket is not valid"
+        "400":
+          description: "Invalid Request"
 definitions:
   Customer:
     type: "object"
@@ -219,6 +221,7 @@ definitions:
       - "date"
       - "birthdate"
       - "validFor"
+      - "validFrom"
     properties:
       validFrom:
         type: "string"
@@ -232,7 +235,8 @@ definitions:
       disabled:
         type: "boolean"
       discountCard:
-        type: "boolean"
+        type: "integer"
+        enum: [25,50]
       zone:
         type: "string"
         enum: [ A,B,C ]
@@ -242,12 +246,11 @@ definitions:
     type: "object"
     required:
       - "id"
-      - "date"
+      - "validFrom"
       - "birthdate"
       - "validFor"
       - "disabled"
       - "discountCard"
-      - "zone"
       - "student"
     properties:
       id:
@@ -265,7 +268,8 @@ definitions:
       disabled:
         type: "boolean"
       discountCard:
-        type: "boolean"
+        type: "integer"
+        enum: [25,50]
       zone:
         type: "string"
         enum: [ A,B,C ]

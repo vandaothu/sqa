@@ -5,7 +5,7 @@ public class TicketRequest {
     public String birthdate;
     public String validFor;
     public boolean disabled = false;
-    public boolean discountCard = false;
+    public int discountCard = -1;
     public String zone;
     public boolean student = false;
 }
