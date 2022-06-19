@@ -20,8 +20,15 @@ public class TicketValidationRequest {
         this.discountCardId = requestBody.discountCardId;
         this.student = requestBody.student;
 
+        this.checkId();
         this.checkZone();
         this.checkDate();
+    }
+
+    private void checkId() throws Exception {
+        if (this.ticketId == - 1) {
+            throw new Exception();
+        }
     }
 
     private void checkZone() throws Exception {

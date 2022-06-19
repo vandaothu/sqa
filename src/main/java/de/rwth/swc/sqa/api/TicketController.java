@@ -113,7 +113,7 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
         LocalDateTime date = LocalDateTime.parse(requestBody.date, dateTimeFormatter);
         if (t.discountCard != -1) {
             DiscountCard userDiscountCard = this.getDiscountCard(requestBody.discountCardId);
-            this.checkDiscountCardValidation(userDiscountCard, date);
+            this.checkDiscountCardValidation(userDiscountCard, date, t.discountCard);
         }
     }
 
@@ -134,10 +134,14 @@ public class TicketController implements TicketsApi, CustomDateTimeFormatter {
         }
     }
 
-    private void checkDiscountCardValidation(DiscountCard card, LocalDateTime date) throws Exception {
+    private void checkDiscountCardValidation(DiscountCard card, LocalDateTime date, int ticketDiscountCard) throws Exception {
         LocalDate convertedDate = date.toLocalDate();
         if ((ChronoUnit.DAYS.between(card.getFrom(), convertedDate) < 0
              || ChronoUnit.DAYS.between(convertedDate, card.getUntil()) < 0)) {
+            throw new Exception("invalid ticket");
+        }
+
+        if (ticketDiscountCard == 50 && card.type == 25) {
             throw new Exception("invalid ticket");
         }
     }

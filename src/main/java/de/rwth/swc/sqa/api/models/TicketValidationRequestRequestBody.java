@@ -1,7 +1,7 @@
 package de.rwth.swc.sqa.api.models;
 
 public class TicketValidationRequestRequestBody {
-    public long ticketId;
+    public long ticketId = -1;
     public String zone;
     public String date;
     public boolean disabled = false;
