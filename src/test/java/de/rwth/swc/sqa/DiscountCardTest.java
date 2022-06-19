@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.server.LocalServerPort;
@@ -50,8 +51,8 @@ public class DiscountCardTest {
         RestAssured.port = port;
 
         for (int i=0; i<3; i++){
-            ObjectNode postbody = staticMapper.createObjectNode().put("birthdate","1999-10-11");
-            Response response = given().contentType("application/json").body(postbody.toString()).post("/customers");
+            ObjectNode postBody = staticMapper.createObjectNode().put("birthdate","1999-10-11");
+            Response response = given().contentType("application/json").body(postBody.toString()).post("/customers");
             customerIds.add(Long.valueOf(response.then().extract().path("id").toString()));
         }
         DiscountCardPara = List.of("id", "customerId", "type", "validFrom", "validFor");
@@ -74,8 +75,8 @@ public class DiscountCardTest {
         boolean jsonError = false;
         //create discount cards for an existed customer
         Long customerId = customerIds.get(0);
-        ObjectNode postbody = objectMapper.createObjectNode().put("validFrom",validFrom).put("validFor",validFor).put("type",type);
-        Response response = given().contentType("application/json").body(postbody.toString()).post(path(customerId));
+        ObjectNode postBody = objectMapper.createObjectNode().put("validFrom",validFrom).put("validFor",validFor).put("type",type);
+        Response response = given().contentType("application/json").body(postBody.toString()).post(path(customerId));
 
         //create discount card for a non-existed customer
         Long randomId = getRandomWithExclusion(new Random(),0L,Long.MAX_VALUE,customerIds);
@@ -145,8 +146,8 @@ public class DiscountCardTest {
         boolean jsonError = false;
         Long customerId = customerIds.get(1);
         //successful post 201
-        ObjectNode postbody = objectMapper.createObjectNode().put("validFrom", validFrom).put("validFor", validFor).put("type", type);
-        given().contentType("application/json").body(postbody.toString()).post(path(customerId)).then().assertThat().statusCode(201);
+        ObjectNode postBody = objectMapper.createObjectNode().put("validFrom", validFrom).put("validFor", validFor).put("type", type);
+        given().contentType("application/json").body(postBody.toString()).post(path(customerId)).then().assertThat().statusCode(201);
 
 
         Response getResponse = given().when().get(path(customerId));
@@ -207,6 +208,36 @@ public class DiscountCardTest {
         Response response = given().when().get(path(customerIds.get(2)));
         response.then().assertThat().statusCode(404);
 
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"validFrom", "validFor", "type"})
+    public void malformedElementJsonRequestTest(String malformedElement){
+        String path = path(customerIds.get(1));
+
+        ObjectNode cardRequest = objectMapper.createObjectNode().put("validFrom","1800-05-26")
+                .put("validFor", "1y").put("type",25);
+
+        //test missing element
+        cardRequest.remove(malformedElement);
+        given().contentType("application/json").body(cardRequest.toString())
+                .post(path).then().assertThat().statusCode(400);
+
+        //test malformed in type
+        cardRequest.put(malformedElement,true);
+        given().contentType("application/json").body(cardRequest.toString())
+                .post(path).then().assertThat().statusCode(400);
+    }
+
+    @Test
+    public void redundantElementJsonRequestTest(){
+        String path = path(customerIds.get(1));
+
+        ObjectNode cardRequest = objectMapper.createObjectNode().put("validFrom","1700-05-26")
+                .put("validFor", "1y").put("type",25).put("redundant_element",true);
+
+        given().contentType("application/json").body(cardRequest.toString())
+                .post(path).then().assertThat().statusCode(400);
     }
 
 

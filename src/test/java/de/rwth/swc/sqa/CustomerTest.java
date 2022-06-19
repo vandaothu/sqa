@@ -47,7 +47,7 @@ public class CustomerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"2023-10-20","1999-13-20","abc-10-20","1999-10-32","1999-10-20"})
+    @ValueSource(strings = {"2023-10-20","1999-13-20","abc-10-20","1999-10-32","1999-10-20","-1"})
     public void addCustomerDateTest(String date) {
         boolean errorInDate = false;
         boolean jsonError = false;
@@ -132,6 +132,28 @@ public class CustomerTest {
 
         Assertions.assertThat(jsonError).isFalse();
     }
+
+    @Test
+    public void malformedElementJsonRequestTest(){
+        ObjectNode customerRequest = objectMapper.createObjectNode();
+
+        //test missing element
+        given().log().all().contentType("application/json").body(customerRequest.toString())
+                .post(PATH).then().assertThat().statusCode(400);
+
+        //test malformed in type
+       customerRequest.put("birthdate",true);
+        given().contentType("application/json").body(customerRequest.toString())
+                .post(PATH).then().assertThat().statusCode(400);
+
+        //redundant element
+        customerRequest.put("redundant_element",true);
+        given().contentType("application/json").body(customerRequest.toString())
+                .post(PATH).then().assertThat().statusCode(400);
+    }
+
+
+
 
 
 }

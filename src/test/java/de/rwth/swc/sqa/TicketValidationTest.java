@@ -8,9 +8,12 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -43,16 +46,19 @@ public class TicketValidationTest {
 
         //create customer
         ObjectNode postcustomer = staticMapper.createObjectNode().put("birthdate","1999-10-11");
-        String[] customerIds = new String[2];
-        customerIds[0] = given().contentType("application/json").body(postcustomer.toString()).post("/customers").then().extract().path("id").toString();
-        customerIds[1] = given().contentType("application/json").body(postcustomer.toString()).post("/customers").then().extract().path("id").toString();
+        String[] customerIds = new String[3];
+        for(int i=0; i<3; i++){
+            customerIds[i] = given().contentType("application/json").body(postcustomer.toString()).post("/customers").then().extract().path("id").toString();
+        }
 
-        ObjectNode[] cardrequest = new ObjectNode[2];
+        ObjectNode[] cardrequest = new ObjectNode[3];
         //create discount card request
-        cardrequest[0] = staticMapper.createObjectNode().put("validFrom","2022-05-26").put("validFor", "1y").put("type",50);
+        cardrequest[0] = staticMapper.createObjectNode().put("validFrom","2022-05-26").put("validFor", "1y").put("type",25);
+        cardrequest[1] = staticMapper.createObjectNode().put("validFrom","2022-05-26").put("validFor", "1y").put("type",50);
+
         //create request of very old discound card
-        cardrequest[1] = staticMapper.createObjectNode().put("validFrom","2000-05-26").put("validFor", "1y").put("type",50);
-        for(int i=0; i<2; i++){
+        cardrequest[2] = staticMapper.createObjectNode().put("validFrom","2000-05-26").put("validFor", "1y").put("type",50);
+        for(int i=0; i<3; i++){
             Response response = given().contentType("application/json").body(cardrequest[i].toString()).post("/customers/"+customerIds[i]+"/discountcards");
             if(response.statusCode()==201){
                 JSONObject jsonCard = null;
@@ -60,6 +66,7 @@ public class TicketValidationTest {
                     jsonCard = new JSONObject(response.getBody().asString());
                     //save pairs of (cardId, simple timeframe of card)
                     discountCards.add(Long.valueOf(jsonCard.get("id").toString()));
+                    System.out.println("Discount card with ID - "+jsonCard.get("id")+": "+jsonCard.get("type"));
                 } catch (JSONException e) {
                     jsonError=true;
                 }
@@ -67,22 +74,25 @@ public class TicketValidationTest {
         }
 
         //buy ticket
-        ObjectNode[] ticketrequest = new ObjectNode[4];
+        ObjectNode[] ticketrequest = new ObjectNode[5];
         //create an expired ticket
         ticketrequest[0] = staticMapper.createObjectNode().put("birthdate","1999-10-11").put("validFrom","2010-05-26T10:38:59").put("validFor","1h").put("zone", "A");
         //create a valid ticket with no discount
         ticketrequest[1] = staticMapper.createObjectNode().put("birthdate","1999-10-11").put("validFrom","2022-05-26T10:38:59").put("validFor","1y");
-        //create a valid ticket with discount card
-        ticketrequest[2] = staticMapper.createObjectNode().put("birthdate","1999-10-11").put("validFrom","2022-05-26T10:38:59").put("validFor","1y").put("discountCard",true);
-        //create a ticket for disabled person
-        ticketrequest[3] = staticMapper.createObjectNode().put("birthdate","1999-10-11").put("validFrom","2010-05-26T10:38:59").put("validFor","30d").put("disabled", true).put("student", true);
-        for(int i=0; i<4; i++){
+        //create a valid ticket with discount card 25
+        ticketrequest[2] = staticMapper.createObjectNode().put("birthdate","1999-10-11").put("validFrom","2020-05-26T10:38:59").put("validFor","1y").put("discountCard",25);
+        //create a valid ticket with discount card 50
+        ticketrequest[3] = staticMapper.createObjectNode().put("birthdate","1999-10-11").put("validFrom","2022-05-26T10:38:59").put("validFor","1y").put("discountCard",50);
+        //create a ticket for disabled student
+        ticketrequest[4] = staticMapper.createObjectNode().put("birthdate","1999-10-11").put("validFrom","2010-05-26T10:38:59").put("validFor","30d").put("disabled", true).put("student", true);
+        for(int i=0; i<5; i++){
             Response response = given().contentType("application/json").body(ticketrequest[i].toString()).post("/tickets");
             if(response.statusCode()==201) {
                 JSONObject jsonTicket = null;
                 try {
                     jsonTicket = new JSONObject(response.getBody().asString());
                     //save pairs of (ticketId, Ticket)
+                    System.out.println(jsonTicket.get("id").toString());
                     tickets.put(Long.valueOf(jsonTicket.get("id").toString()), new Ticket(jsonTicket));
                 } catch (JSONException e) {
                     jsonError=true;
@@ -91,6 +101,41 @@ public class TicketValidationTest {
             }
         }
         assertThat(jsonError).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ticketId", "zone", "date"})
+    public void malformedElementJsonRequestTest(String malformedElement){
+        Long ticketId = tickets.keySet().iterator().next();
+        Ticket ticket = tickets.get(ticketId);
+
+        ObjectNode validationRequest = objectMapper.createObjectNode().put("ticketId", ticketId).
+                put("zone", "A").
+                put("date", ticket.getStartTime());
+
+        //test missing element
+        validationRequest.remove(malformedElement);
+        given().log().all().contentType("application/json").body(validationRequest.toString())
+                .post(PATH).then().assertThat().statusCode(400);
+
+        //test malformed in type
+        validationRequest.put(malformedElement,true);
+        given().contentType("application/json").body(validationRequest.toString())
+                .post(PATH).then().assertThat().statusCode(400);
+    }
+
+    @Test
+    public void redundantElementJsonRequestTest(){
+        Long ticketId = tickets.keySet().iterator().next();
+        Ticket ticket = tickets.get(ticketId);
+
+        ObjectNode validationRequest = objectMapper.createObjectNode().put("ticketId", ticketId).
+                put("zone", "A").
+                put("date", ticket.getStartTime()).
+                put("redundant_element",true);
+
+        given().contentType("application/json").body(validationRequest.toString())
+                .post(PATH).then().assertThat().statusCode(400);
     }
 
     @Test
@@ -111,13 +156,12 @@ public class TicketValidationTest {
         //disabled people can use normal ticket
         given().contentType("application/json").body(post_inconsistent_disabled.toString()).post(PATH).then().assertThat().statusCode(200);
 
-        Long special_ticketId = tickets.keySet().stream().skip(3).findFirst().orElse(null);
+        Long special_ticketId = tickets.keySet().stream().skip(4).findFirst().orElse(null);
         post_inconsistent_disabled.remove("disabled");
         post_inconsistent_disabled.remove("ticketId");
         post_inconsistent_disabled.put("ticketId",special_ticketId);
         //normal people can't use ticket for the disabled
         given().contentType("application/json").body(post_inconsistent_disabled.toString()).post(PATH).then().assertThat().statusCode(403);
-
 
         ObjectNode post_inconsistent_student = objectMapper.createObjectNode().put("ticketId", ticketId).
                 put("zone", ticket.zone).
@@ -148,7 +192,7 @@ public class TicketValidationTest {
                 put("date", ticket.getStartTime());
 
         //send request to validate ticket that is used in wrong timeframe
-        given().contentType("application/json").body(post_wrongdate.toString()).post(PATH).then().assertThat().statusCode(403);
+        given().log().all().contentType("application/json").body(post_wrongdate.toString()).post(PATH).then().assertThat().statusCode(403);
 
         //correct ticket information, used in correct timeframe
         ObjectNode post_correctdate = objectMapper.createObjectNode().put("ticketId", ticketId).
@@ -158,33 +202,40 @@ public class TicketValidationTest {
         given().contentType("application/json").body(post_correctdate.toString()).post(PATH).then().assertThat().statusCode(200); //BVT - lower bound
         post_correctdate.remove("date"); post_correctdate.put("date", ticket.getEndTime());
         given().contentType("application/json").body(post_correctdate.toString()).post(PATH).then().assertThat().statusCode(200); //BVT - upper bound
+
+        //more BVT
+        post_correctdate.remove("date"); post_correctdate.put("date", ticket.validFrom.minusSeconds(1).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        given().contentType("application/json").body(post_correctdate.toString()).post(PATH).then().assertThat().statusCode(403); //BVT - lower bound--
+        post_correctdate.remove("date"); post_correctdate.put("date", ticket.validTil.plusSeconds(1).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        given().log().all().contentType("application/json").body(post_correctdate.toString()).post(PATH).then().assertThat().statusCode(403); //BVT - upper bound++
     }
 
     @Test
     public void discountCardValidationTest(){
-        Iterator<Long> iter = tickets.keySet().iterator();
-        Long first = iter.next();
-        Long NO_discount_ticketID = iter.next();
-        Long discount_ticketID = iter.next();
-        Ticket NO_discount_ticket = tickets.get(NO_discount_ticketID);
-        Ticket discount_ticket = tickets.get(discount_ticketID);
+        Long NO_discount_ticketID = tickets.keySet().stream().skip(1).findFirst().orElse(null);
+        Long discount_ticketId_25 = tickets.keySet().stream().skip(2).findFirst().orElse(null);
+        Long discount_ticketId_50 = tickets.keySet().stream().skip(3).findFirst().orElse(null);
 
-        Long valid_discountCard = discountCards.get(0);
-        Long expired_discountCard = discountCards.get(1);
+        Ticket NO_discount_ticket = tickets.get(NO_discount_ticketID);
+        Ticket discount_ticket_25 = tickets.get(discount_ticketId_25);
+        Ticket discount_ticket_50 = tickets.get(discount_ticketId_50);
+
+        Long valid_discountCard_25 = discountCards.get(0);
+        Long valid_discountCard_50 = discountCards.get(1);
+        Long expired_discountCard = discountCards.get(2);
 
 
         //validation request for ticket with NO discount card
 
         ObjectNode post_ticketWithNoDiscount = objectMapper.createObjectNode().put("ticketId", NO_discount_ticketID).
                 put("zone", NO_discount_ticket.zone).
-                put("date", NO_discount_ticket.getStartTime()).
-                put("discountCard", valid_discountCard);
+                put("date", NO_discount_ticket.getStartTime());
 
-        //given a discountCard -> card-holder can use non-discounted ticket
+        //given no discountCard
         given().contentType("application/json").body(post_ticketWithNoDiscount.toString()).post(PATH).then().assertThat().statusCode(200);
 
-        post_ticketWithNoDiscount.remove("discountCard");
-        //given no discountCard
+        //given a discountCard -> card-holder can use non-discounted ticket
+        post_ticketWithNoDiscount.put("discountCardId", valid_discountCard_50);
         given().contentType("application/json").body(post_ticketWithNoDiscount.toString()).post(PATH).then().assertThat().statusCode(200);
 
 
@@ -192,23 +243,39 @@ public class TicketValidationTest {
 
         //validation request for ticket WITH a discount card
 
-        ObjectNode post_ticketWithDiscount = objectMapper.createObjectNode().put("ticketId", discount_ticketID).
-                put("zone", discount_ticket.zone).
-                put("date", discount_ticket.getStartTime());
+        System.out.println(discount_ticketId_50+", "+ tickets.get(discount_ticketId_50).discountCard);
+        System.out.println(discount_ticketId_25+", "+ tickets.get(discount_ticketId_25).discountCard);
+        System.out.println(NO_discount_ticketID+", "+ tickets.get(NO_discount_ticketID).discountCard);
+
+        System.out.println("card 25:"+ valid_discountCard_25);
+        System.out.println("card 50:"+ valid_discountCard_50);
+
+        ObjectNode post_ticketWithDiscount = objectMapper.createObjectNode().put("ticketId", discount_ticketId_50).
+                put("zone", discount_ticket_50.zone).
+                put("date", discount_ticket_50.getStartTime());
         //given no discountCard
         given().contentType("application/json").body(post_ticketWithDiscount.toString()).post(PATH).then().assertThat().statusCode(403);
 
-
-        post_ticketWithDiscount.put("discountCardId", expired_discountCard);
         //given expired discountCard
+        post_ticketWithDiscount.put("discountCardId", expired_discountCard);
         given().contentType("application/json").body(post_ticketWithDiscount.toString()).post(PATH).then().assertThat().statusCode(403);
 
+        //given weaker discountCard
+        post_ticketWithDiscount.remove("discountCardId");
+        post_ticketWithDiscount.put("discountCardId", valid_discountCard_25);
+        given().log().all().contentType("application/json").body(post_ticketWithDiscount.toString()).post(PATH).then().assertThat().statusCode(403);
 
+        //given correct discountCard
         post_ticketWithDiscount.remove("discountCard");
-        post_ticketWithDiscount.put("discountCardId", valid_discountCard);
-        //given valid discountCard
+        post_ticketWithDiscount.put("discountCardId", valid_discountCard_50);
         given().contentType("application/json").body(post_ticketWithDiscount.toString()).post(PATH).then().assertThat().statusCode(200);
 
+        //validation with a stronger discount Card
+        ObjectNode post_ticketWithDiscount_25 = objectMapper.createObjectNode().put("ticketId", discount_ticketId_25).
+                put("zone", discount_ticket_25.zone).
+                put("date", discount_ticket_25.getStartTime()).
+                put("discountCardId", valid_discountCard_50);
+        given().contentType("application/json").body(post_ticketWithDiscount.toString()).post(PATH).then().assertThat().statusCode(200);
     }
 
     private static class Ticket{
@@ -218,7 +285,7 @@ public class TicketValidationTest {
         protected boolean disabled;
         protected String zone;
         protected boolean student;
-        protected boolean discountCard;
+        protected int discountCard;
 
         protected boolean parsingJson = false;
 
@@ -244,9 +311,9 @@ public class TicketValidationTest {
                         this.validTil = this.validFrom;
                         break;
                 }
-                this.disabled = (Boolean) jsonTicket.get("disabled");
-                this.student = (Boolean) jsonTicket.get("student");
-                this.discountCard = (Boolean) jsonTicket.get("discountCard");
+                this.disabled = (boolean) jsonTicket.get("disabled");
+                this.student = (boolean) jsonTicket.get("student");
+                this.discountCard = (int) jsonTicket.get("discountCard");
                 if(jsonTicket.get("zone").toString()!="null"){
                     this.zone = jsonTicket.get("zone").toString();
                 }
