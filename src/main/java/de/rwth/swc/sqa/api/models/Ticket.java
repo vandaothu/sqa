@@ -10,7 +10,6 @@ public class Ticket implements CustomDateTimeFormatter {
     public long id;
     public String validFrom;
     public String birthdate;
-    public LocalDate LDBirthDate;
     public String validFor;
     public boolean disabled;
     public int discountCard = -1;
@@ -45,7 +44,6 @@ public class Ticket implements CustomDateTimeFormatter {
     }
 
     private void checkTimeFormat() throws Exception {
-        this.LDBirthDate = LocalDate.parse(this.birthdate, dateFormatter);
         try {
             LocalDateTime.parse(this.validFrom, dateTimeFormatter);
         } catch (Exception e) {
@@ -66,7 +64,7 @@ public class Ticket implements CustomDateTimeFormatter {
         boolean isSenior = false;
         boolean isStudent = false;
         boolean isChild = false;
-        long age = ChronoUnit.YEARS.between(this.LDBirthDate, currentDate);
+        long age = ChronoUnit.YEARS.between(this.convertBirthDate(), currentDate);
 
         if (this.student && (age < 14 || age >= 28)) {
             throw new Exception();
@@ -98,19 +96,23 @@ public class Ticket implements CustomDateTimeFormatter {
         }
     }
 
-    public LocalDateTime getFrom() {
+    public LocalDateTime convertFrom() {
         return LocalDateTime.parse(this.validFrom, dateTimeFormatter);
     }
 
-    public LocalDateTime getUntil() {
+    public LocalDateTime convertUntil() {
         if (Objects.equals(this.validFor, "1h")) {
-            return this.getFrom().plusHours(1);
+            return this.convertFrom().plusHours(1);
         } else if (Objects.equals(this.validFor, "1d")) {
-            return this.getFrom().plusDays(1);
+            return this.convertFrom().plusDays(1);
         } else if (Objects.equals(this.validFor, "30d")) {
-            return this.getFrom().plusDays(30);
+            return this.convertFrom().plusDays(30);
         } else {
-            return this.getFrom().plusYears(1);
+            return this.convertFrom().plusYears(1);
         }
+    }
+
+    private LocalDate convertBirthDate() {
+        return LocalDate.parse(this.birthdate, dateFormatter);
     }
 }

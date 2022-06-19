@@ -103,8 +103,8 @@ public class CustomerController implements CustomersApi {
 
     private void checkDiscountCardConflict(DiscountCard cardToCheck, long customerId) throws Exception {
         for (DiscountCard card : this.getDiscountCards(customerId)) {
-            if (!(ChronoUnit.DAYS.between(card.getUntil(), cardToCheck.getFrom()) > 0
-                  || ChronoUnit.DAYS.between(cardToCheck.getUntil(), card.getFrom()) > 0)) {
+            if (!(ChronoUnit.DAYS.between(card.convertUntil(), cardToCheck.convertFrom()) > 0
+                  || ChronoUnit.DAYS.between(cardToCheck.convertUntil(), card.convertFrom()) > 0)) {
                 throw new Exception("conflict");
             }
         }

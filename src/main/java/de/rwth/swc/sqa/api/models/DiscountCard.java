@@ -30,15 +30,15 @@ public class DiscountCard extends DiscountCardRequestBody {
         this.validFor = validFor;
     }
 
-    public LocalDate getFrom() {
+    public LocalDate convertFrom() {
         return LocalDate.parse(validFrom, dateFormatter);
     }
 
-    public LocalDate getUntil() {
+    public LocalDate convertUntil() {
         if (Objects.equals(this.validFor, "30d")) {
-            return this.getFrom().plusDays(30);
+            return this.convertFrom().plusDays(30);
         } else {
-            return this.getFrom().plusYears(1);
+            return this.convertFrom().plusYears(1);
         }
     }
 }
