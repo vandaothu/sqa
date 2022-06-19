@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
-import org.json.JSONException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -61,10 +60,9 @@ public class TicketTest {
             response.then().assertThat()
                     .body("validFrom", equalTo("2022-05-26T13:00:00"))
                     .body("birthdate", equalTo(date))
-                    .body("LDBirthDate", equalTo(date))
                     .body("validFor", equalTo("30d"))
                     .body("disabled", equalTo(false))
-                    .body("discountCard", equalTo(false))
+                    .body("discountCard", equalTo(-1))
                     .body("zone", equalTo(null))
                     .body("student",equalTo(false))
                     .statusCode(201);
@@ -96,10 +94,9 @@ public class TicketTest {
             response.then().assertThat()
                     .body("validFrom", equalTo("2022-05-26T13:00:00"))
                     .body("birthdate", equalTo("1992-05-26"))
-                    .body("LDBirthDate", equalTo("1992-05-26"))
                     .body("validFor", equalTo("1y"))
                     .body("disabled", equalTo(false))
-                    .body("discountCard", equalTo(false))
+                    .body("discountCard", equalTo(-1))
                     .body("zone", equalTo(null))
                     .body("student",equalTo(false))
                     .statusCode(201);
@@ -120,10 +117,9 @@ public class TicketTest {
         response.then().assertThat()
                 .body("validFrom", equalTo("2022-05-26T13:00:00"))
                 .body("birthdate", equalTo("2012-12-13"))
-                .body("LDBirthDate", equalTo("2012-12-13"))
                 .body("validFor", equalTo("30d"))
                 .body("disabled", equalTo(true))
-                .body("discountCard", equalTo(false))
+                .body("discountCard", equalTo(-1))
                 .body("zone", equalTo(null))
                 .body("student",equalTo(false))
                 .statusCode(201);
@@ -149,10 +145,9 @@ public class TicketTest {
         response.then().assertThat()
                 .body("validFrom", equalTo("2022-05-26T13:00:00"))
                 .body("birthdate", equalTo("2002-12-13"))
-                .body("LDBirthDate", equalTo("2002-12-13"))
                 .body("validFor", equalTo("30d"))
                 .body("disabled", equalTo(false))
-                .body("discountCard", equalTo(false))
+                .body("discountCard", equalTo(-1))
                 .body("zone", equalTo(null))
                 .body("student",equalTo(true))
                 .statusCode(201);
@@ -169,19 +164,18 @@ public class TicketTest {
     @Test
     public void buyTicketDiscountTest() {
         
-        //set discount to true
-        ObjectNode body = objectMapper.createObjectNode().put("validFrom","2022-05-26T13:00:00")
+        //set discount to 1
+        ObjectNode body = objectMapper.createObjectNode().put("validFrom","2021-05-26T13:00:00")
                                                             .put("birthdate","2002-12-13")
                                                             .put("validFor","30d")
-                                                            .put("discountCard", true);                          
+                                                            .put("discountCard", 25);                          
         Response response = given().contentType("application/json").body(body.toString()).post(PATH);
         response.then().assertThat()
-                .body("validFrom", equalTo("2022-05-26T13:00:00"))
+                .body("validFrom", equalTo("2021-05-26T13:00:00"))
                 .body("birthdate", equalTo("2002-12-13"))
-                .body("LDBirthDate", equalTo("2002-12-13"))
                 .body("validFor", equalTo("30d"))
                 .body("disabled", equalTo(false))
-                .body("discountCard", equalTo(true))
+                .body("discountCard", equalTo(25))
                 .body("zone", equalTo(null))
                 .body("student",equalTo(false))
                 .statusCode(201);
@@ -190,7 +184,7 @@ public class TicketTest {
         ObjectNode errorBody = objectMapper.createObjectNode().put("validFrom","2022-05-26T13:00:00")
                                                             .put("birthdate","1992-12-13")
                                                             .put("validFor","1d")
-                                                            .put("discountCard",true);                             
+                                                            .put("discountCard",50);                             
         Response errorResponse = given().contentType("application/json").body(errorBody.toString()).post(PATH);
         errorResponse.then().assertThat().statusCode(400);
     }
